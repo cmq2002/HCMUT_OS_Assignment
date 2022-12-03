@@ -132,11 +132,11 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 	 * */
 	
 	proc->seg_table->size = 1 << SEGMENT_LEN;
-	int availPhyPageCounter = 0;
-
-
+	
 	// Store available frame inx in physical memory
-	int* availPhyIdx = (int*)malloc(sizeof(int)* (num_pages+1));
+	int* availPhyIdx = (int*)malloc(sizeof(int)* (num_pages));
+	int availPhyPageCounter = 0;
+	
 	for (int i=0; i<NUM_PAGES; i++){
 		if (_mem_stat[i].proc == 0){
 			availPhyIdx[availPhyPageCounter] = i;
@@ -156,6 +156,7 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 		/* We could allocate new memory region to the process */
 		ret_mem = proc->bp;
 		// proc->bp += num_pages * PAGE_SIZE;
+
 		/* Update status of physical pages which will be allocated
 		 * to [proc] in _mem_stat. Tasks to do:
 		 * 	- Update [proc], [index], and [next] field
@@ -175,7 +176,7 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 			addr_t second_lv = get_second_lv(proc->bp);
 
 			//Create the page if it has not been initialized yet
-			if (!proc->seg_table->table[first_lv].next_lv){
+			if (proc->seg_table->table[first_lv].next_lv == NULL){
 				proc->seg_table->table[first_lv].next_lv = (struct page_table_t*)malloc(sizeof(struct page_table_t));
 				proc->seg_table->table[first_lv].next_lv->size = 1 << PAGE_LEN;
 			}
@@ -217,7 +218,7 @@ int free_mem(addr_t address, struct pcb_t * proc) {
 	if (translate(address, &physicalAddr, proc)){
 		addr_t frameNumber = physicalAddr >> OFFSET_LEN;
 
-		while(frameNumber != -1){
+		while(frameNumber != -1){ // Looping from the 1st to the last physical page
 			_mem_stat[frameNumber].proc = 0;
 			addr_t first_lv = get_first_lv(virtualAddr);
 			for (int i=0; i<proc->seg_table->table[first_lv].next_lv->size; i++){
