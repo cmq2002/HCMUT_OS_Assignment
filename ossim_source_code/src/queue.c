@@ -13,14 +13,14 @@ void enqueue(struct queue_t * q, struct pcb_t * proc) {
 		q->size++;  
 	}
 	else{
-		// enqueue in increasing order of priority
+		// enqueue in increasing order of prio		
 		int idx = 0;
 		for (; idx<q->size; idx++){
 			if (proc->prio < q->proc[idx]->prio)
 				break;
 		}
 
-		for (int i=q->size; i>idx; i--){
+		for (int i=q->size-1; i>idx; i--){
 			q->proc[i] = q->proc[i-1];
 		}
 
@@ -34,7 +34,11 @@ struct pcb_t * dequeue(struct queue_t * q) {
 	 * in the queue [q] and remember to remove it from q
 	 * */
 	if (q->size == 0) return NULL;
-	struct pcb_t* removeElement = q->proc[--q->size];
+	struct pcb_t* removeElement = q->proc[0];
+	for (int i=0; i<q->size-1; i++){
+		q->proc[i] = q->proc[i+1];
+	}
+	q->size--;
 	return removeElement;
 }
 

@@ -43,9 +43,9 @@ static addr_t get_second_lv(addr_t addr) {
 //TODO 1
 
 /* Search for page table table from the a segment table */
-static struct page_table_t * get_page_table(
+static struct trans_table_t * get_page_table(
 		addr_t index, 	// Segment level index
-		struct seg_table_t * seg_table) { // first level table
+		struct page_table_t * page_table) { // first level table
 	
 	/*
 	 * TODO: Given the Segment index [index], you must go through each
@@ -55,10 +55,10 @@ static struct page_table_t * get_page_table(
 	 * */
 
 	int i;
-	for (i = 0; i < seg_table->size; i++) {
+	for (i = 0; i < page_table->size; i++) {
 		// Enter your code here
-		if (index == seg_table->table[i].v_index)
-			return seg_table->table[i].next_lv;
+		if (index == page_table->table[i].v_index)
+			return page_table->table[i].next_lv;
 	}
 	return NULL;
 
@@ -85,8 +85,8 @@ static int translate(
 	addr_t second_lv = get_second_lv(virtual_addr);
 	
 	/* Search in the first level */
-	struct page_table_t * page_table = NULL;
-	page_table = get_page_table(first_lv, proc->seg_table);
+	struct trans_table_t * page_table = NULL;
+	page_table = get_page_table(first_lv, proc->page_table);
 	if (page_table == NULL) {
 		return 0;
 	}
@@ -118,8 +118,7 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 	 * byte in the allocated memory region to [ret_mem].
 	 * */
 
-	uint32_t num_pages = ((size % PAGE_SIZE)==0) ? size / PAGE_SIZE :
-		size / PAGE_SIZE + 1; // Number of pages we will use
+	uint32_t num_pages = ((size % PAGE_SIZE)==0) ? size / PAGE_SIZE : size / PAGE_SIZE + 1; // Number of pages we will use
 	int mem_avail = 0; // We could allocate new memory region or not?
 
 	/* First we must check if the amount of free memory in
@@ -131,9 +130,9 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 	 * For virtual memory space, check bp (break pointer).
 	 * */
 	
-	proc->seg_table->size = 1 << SEGMENT_LEN;
+	proc->page_table->size = 1 << SEGMENT_LEN;
 	
-	// Store available frame inx in physical memory
+	// Store available frame idx in physical memory
 	int* availPhyIdx = (int*)malloc(sizeof(int)* (num_pages));
 	int availPhyPageCounter = 0;
 	
@@ -176,15 +175,15 @@ addr_t alloc_mem(uint32_t size, struct pcb_t * proc) {
 			addr_t second_lv = get_second_lv(proc->bp);
 
 			//Create the page if it has not been initialized yet
-			if (proc->seg_table->table[first_lv].next_lv == NULL){
-				proc->seg_table->table[first_lv].next_lv = (struct page_table_t*)malloc(sizeof(struct page_table_t));
-				proc->seg_table->table[first_lv].next_lv->size = 1 << PAGE_LEN;
+			if (proc->page_table->table[first_lv].next_lv == NULL){
+				proc->page_table->table[first_lv].next_lv = (struct trans_table_t*)malloc(sizeof(struct trans_table_t));
+				proc->page_table->table[first_lv].next_lv->size = 1 << PAGE_LEN;
 			}
 
 			//Update the page table
-			proc->seg_table->table[first_lv].v_index = first_lv;
-			proc->seg_table->table[first_lv].next_lv->table[second_lv].v_index = second_lv;
-			proc->seg_table->table[first_lv].next_lv->table[second_lv].p_index = availPhyIdx[idx];
+			proc->page_table->table[first_lv].v_index = first_lv;
+			proc->page_table->table[first_lv].next_lv->table[second_lv].v_index = second_lv;
+			proc->page_table->table[first_lv].next_lv->table[second_lv].p_index = availPhyIdx[idx];
 			proc->bp += PAGE_SIZE;
 		}
 
@@ -215,16 +214,16 @@ int free_mem(addr_t address, struct pcb_t * proc) {
 	addr_t physicalAddr;
 	addr_t virtualAddr = address;
 
-	if (translate(address, &physicalAddr, proc)){
+	if (translate(address, &physicalAddr, proc)==1){
 		addr_t frameNumber = physicalAddr >> OFFSET_LEN;
 
 		while(frameNumber != -1){ // Looping from the 1st to the last physical page
 			_mem_stat[frameNumber].proc = 0;
 			addr_t first_lv = get_first_lv(virtualAddr);
-			for (int i=0; i<proc->seg_table->table[first_lv].next_lv->size; i++){
-				if (proc->seg_table->table[first_lv].next_lv->table[i].p_index == frameNumber){
-					proc->seg_table->table[first_lv].next_lv->table[i].v_index = 0;
-					proc->seg_table->table[first_lv].next_lv->table[i].p_index = 0;
+			for (int i=0; i<proc->page_table->table[first_lv].next_lv->size; i++){
+				if (proc->page_table->table[first_lv].next_lv->table[i].p_index == frameNumber){
+					proc->page_table->table[first_lv].next_lv->table[i].v_index = 0;
+					proc->page_table->table[first_lv].next_lv->table[i].p_index = 0;
 				}
 			}
 			frameNumber = _mem_stat[frameNumber].next;

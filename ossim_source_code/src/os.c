@@ -3,6 +3,7 @@
 #include "timer.h"
 #include "sched.h"
 #include "loader.h"
+#include "mem.h"
 
 #include <pthread.h>
 #include <stdio.h>
@@ -37,8 +38,9 @@ static void *cpu_routine(void *args)
 	/* Check for new process in ready queue */
 	int time_left = 0;
 	struct pcb_t *proc = NULL;
-	int max = 20;
-	while (max--)
+	// int max = 20;
+	// while (max--)
+	while (1)
 	{
 		/* Check the status of current process */
 		if (proc == NULL)

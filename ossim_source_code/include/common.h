@@ -39,9 +39,7 @@ struct code_seg_t {
 	uint32_t size;
 };
 
-
-// trans_table_t
-struct page_table_t {
+struct trans_table_t {
 	/* A row in the page table of the second layer */
 	struct  {
 		addr_t v_index; // The index of virtual address
@@ -51,12 +49,11 @@ struct page_table_t {
 };
 
 /* Mapping virtual addresses and physical ones */
-// page_table_t
-struct seg_table_t {
+struct page_table_t {
 	/* Translation table for the first layer */
 	struct {
 		addr_t v_index;	// Virtual index
-		struct page_table_t * next_lv;
+		struct trans_table_t * next_lv;
 	} table[1 << FIRST_LV_LEN];
 	int size;	// Number of row in the first layer
 };
@@ -64,13 +61,13 @@ struct seg_table_t {
 /* PCB, describe information about a process */
 struct pcb_t {
 	uint32_t pid;	// PID
-	// uint32_t priority;
+	uint32_t prio; 
 	struct code_seg_t * code;	// Code segment
 	addr_t regs[10]; // Registers, store address of allocated regions
 	uint32_t pc; // Program pointer, point to the next instruction
-	struct seg_table_t * seg_table; // Page table
+	struct page_table_t * page_table; // Page table
 	uint32_t bp;	// Break pointer
-	uint32_t prio; 
+	
 };
 
 #endif
